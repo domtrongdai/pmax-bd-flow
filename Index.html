@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PMAX AI-First BD Orchestration Flow</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0D1B3E;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    color: #fff;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #0D1B3E 0%, #122050 100%);
+    border-bottom: 2px solid #2E6BC4;
+    padding: 18px 32px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .header h1 { font-size: 17px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+  .header p  { font-size: 11px; color: #7090B8; margin-top: 3px; }
+  .badge { background: #1A56B0; color: #A8C8F8; font-size: 10px; font-weight: 700;
+           padding: 4px 10px; border-radius: 20px; }
+
+  /* ── Main canvas ── */
+  .canvas {
+    padding: 24px 32px;
+    display: flex; flex-direction: column; gap: 0;
+  }
+
+  /* ── Section labels ── */
+  .section-label {
+    font-size: 9px; font-weight: 700; letter-spacing: 2px;
+    color: #3A5A8A; text-transform: uppercase;
+    margin-bottom: 8px; padding-left: 4px;
+  }
+
+  /* ── INPUT LAYER ── */
+  .input-layer {
+    background: #0A1A30;
+    border: 1px solid #1A3A6B;
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 16px;
+  }
+  .input-chip {
+    background: #1A2D50;
+    border: 1px solid #2A4A7A;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 9.5px; color: #90B8E0;
+    white-space: nowrap;
+    display: flex; align-items: center; gap: 5px;
+    transition: border-color 0.2s, background 0.2s;
+    cursor: default;
+  }
+  .input-chip:hover { background: #233D6A; border-color: #4A80C0; }
+  .input-chip .ic { font-size: 12px; }
+  .input-chip.green { background: #0F2010; border-color: #1A5020; color: #80D080; }
+  .input-chip.amber { background: #201800; border-color: #4A3000; color: #D4A050; }
+
+  /* ── AGENT ROW ── */
+  .agents-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 0;
+  }
+
+  .agent-card {
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+  }
+  .agent-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  }
+  .agent-card.a1 { border: 1.5px solid #1A56B0; }
+  .agent-card.a2 { border: 1.5px solid #009599; }
+  .agent-card.a3 { border: 1.5px solid #D4890A; }
+  .agent-card.a4 { border: 1.5px solid #197347; }
+
+  .agent-header {
+    padding: 12px 14px 10px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .a1 .agent-header { background: linear-gradient(135deg, #0D3A80, #1A56B0); }
+  .a2 .agent-header { background: linear-gradient(135deg, #006468, #009599); }
+  .a3 .agent-header { background: linear-gradient(135deg, #8B5E0A, #D4890A); }
+  .a4 .agent-header { background: linear-gradient(135deg, #0F4A2A, #197347); }
+
+  .agent-num {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 900; color: #fff;
+    flex-shrink: 0;
+  }
+  .a1 .agent-num { background: #1A56B0; }
+  .a2 .agent-num { background: #009599; }
+  .a3 .agent-num { background: #D4890A; }
+  .a4 .agent-num { background: #197347; }
+
+  .agent-title { font-size: 11px; font-weight: 700; color: #fff; line-height: 1.3; }
+  .agent-sub   { font-size: 9px; color: rgba(255,255,255,0.6); margin-top: 1px; }
+
+  .agent-body {
+    background: #0F1F3A;
+    padding: 10px 14px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+
+  .agent-section {
+    border-radius: 8px; padding: 8px 10px;
+  }
+  .sec-trigger { background: #1A2436; }
+  .sec-tools   { background: #111E30; }
+  .sec-output  { background: #0D1A2A; }
+  .a1 .sec-output { border: 1px solid #1A56B050; }
+  .a2 .sec-output { border: 1px solid #00959950; }
+  .a3 .sec-output { border: 1px solid #D4890A50; }
+  .a4 .sec-output { border: 1px solid #19734750; }
+
+  .sec-label {
+    font-size: 8px; font-weight: 700; letter-spacing: 1.5px;
+    color: #5080A0; margin-bottom: 4px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .sec-label .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    display: inline-block;
+  }
+  .dot-trigger { background: #4A7AB0; }
+  .dot-tools   { background: #304060; }
+  .dot-a1      { background: #1A56B0; }
+  .dot-a2      { background: #009599; }
+  .dot-a3      { background: #D4890A; }
+  .dot-a4      { background: #197347; }
+
+  .sec-content {
+    font-size: 9px; color: #90B8D8; line-height: 1.6;
+  }
+  .sec-output .sec-content { color: #90D8A0; }
+
+  /* ── CONNECTOR (between agents) ── */
+  .connector-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    height: 28px;
+    position: relative;
+    align-items: center;
+    margin: 0;
+  }
+  .conn-cell {
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .conn-arrow {
+    position: absolute; right: -14px; top: 50%; transform: translateY(-50%);
+    width: 14px; display: flex; align-items: center; justify-content: center;
+    z-index: 10;
+  }
+  .flow-label {
+    font-size: 7.5px; color: #4A80B0; text-align: center;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0;
+    width: 100%;
+  }
+  .flow-line {
+    height: 2px; flex: 1;
+  }
+  .flow-line.a1 { background: linear-gradient(90deg, #1A56B0, #1A56B080); }
+  .flow-line.a2 { background: linear-gradient(90deg, #009599, #00959980); }
+  .flow-line.a3 { background: linear-gradient(90deg, #D4890A, #D4890A80); }
+  .flow-arrow-head { font-size: 14px; color: #4A80B0; line-height: 1; }
+
+  /* ── SPINE ── */
+  .spine-wrapper {
+    position: relative;
+    margin: 14px 0;
+  }
+  .spine {
+    background: linear-gradient(135deg, #0F2A50, #122A5A);
+    border: 2px solid #2E6BC4;
+    border-radius: 10px;
+    padding: 10px 14px;
+    display: flex; align-items: center; gap: 10px;
+    position: relative;
+  }
+  .spine-label {
+    background: #1A3A6B;
+    border-radius: 8px;
+    padding: 6px 10px;
+    font-size: 10px; font-weight: 700; color: #A8C8F8;
+    white-space: nowrap; flex-shrink: 0;
+  }
+  .spine-fields {
+    display: flex; flex-wrap: wrap; gap: 5px; flex: 1;
+  }
+  .spine-field {
+    background: #1E3A6A;
+    border: 1px solid #3060A0;
+    border-radius: 5px;
+    padding: 4px 8px;
+    font-size: 8.5px; color: #90C0F0;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s;
+    cursor: default;
+  }
+  .spine-field:hover { background: #284A80; border-color: #5080C0; color: #C0E0FF; }
+  .spine-note {
+    font-size: 8px; color: #3A5A80; white-space: nowrap; flex-shrink: 0;
+  }
+
+  /* Write/Read arrows between agents and spine */
+  .flow-bridge {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    height: 36px;
+  }
+  .bridge-cell {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; position: relative;
+  }
+  .bridge-label { font-size: 7px; font-weight: 600; text-align: center; line-height: 1.3; }
+  .arrow-down { font-size: 14px; line-height: 1; }
+  .arrow-up   { font-size: 12px; line-height: 1; opacity: 0.5; }
+
+  /* ── OUTPUT LAYER ── */
+  .output-layer {
+    background: #080E1C;
+    border: 1px solid #1A3A6B;
+    border-radius: 12px;
+    padding: 14px;
+    margin-top: 14px;
+  }
+  .output-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .output-card {
+    background: #0F1A2A;
+    border: 1px solid #2E5090;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+  }
+  .output-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+  .output-header {
+    background: #2E6BC4;
+    padding: 7px 9px;
+    font-size: 9px; font-weight: 700; color: #fff;
+    line-height: 1.3;
+  }
+  .output-body { padding: 8px 9px; }
+  .output-line {
+    font-size: 8px; color: #8090A8; line-height: 1.7;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .output-line.delivery { color: #5090D0; font-weight: 600; }
+  .output-line.urgent   { color: #F08080; }
+  .output-line.followup { color: #D4A050; }
+  .output-line.monitor  { color: #70C080; }
+
+  /* ── Human handoff ── */
+  .handoff-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+  }
+  .handoff-cell { display: flex; justify-content: center; }
+  .handoff-badge {
+    background: #3A0A0A;
+    border: 1.5px solid #C0392B;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 8px; color: #FFA0A0;
+    text-align: center; line-height: 1.4;
+    white-space: nowrap;
+    transition: background 0.2s;
+    cursor: default;
+  }
+  .handoff-badge:hover { background: #5A1010; }
+  .handoff-empty { width: 100%; }
+
+  /* ── Legend ── */
+  .legend {
+    display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+    margin-top: 18px; padding-top: 14px;
+    border-top: 1px solid #1A3050;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 9px; color: #5080A0; }
+  .leg-box { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+  .leg-line { width: 20px; height: 2px; flex-shrink: 0; }
+  .leg-dashed { width: 20px; height: 0; border-top: 2px dashed; flex-shrink: 0; }
+
+  /* ── Tooltip ── */
+  .tooltip {
+    position: fixed;
+    background: #0D2040;
+    border: 1px solid #2E6BC4;
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 10px; color: #A8C8F8;
+    max-width: 260px; line-height: 1.6;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 999;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+  }
+  .tooltip.visible { opacity: 1; }
+  .tooltip-title { font-weight: 700; color: #fff; margin-bottom: 5px; font-size: 11px; }
+
+  /* ── Pulse animation on active agent ── */
+  @keyframes pulse-border {
+    0%   { box-shadow: 0 0 0 0 rgba(46, 107, 196, 0.6); }
+    70%  { box-shadow: 0 0 0 8px rgba(46, 107, 196, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(46, 107, 196, 0); }
+  }
+  .agent-card.active { animation: pulse-border 1.5s infinite; }
+
+  /* ── Flow animation ── */
+  @keyframes flow-dot {
+    0%   { left: 0%; }
+    100% { left: 100%; }
+  }
+  .flow-dot {
+    position: absolute;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #4A9EDB;
+    top: 50%; transform: translateY(-50%);
+    animation: flow-dot 1.2s linear infinite;
+    pointer-events: none;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    position: fixed; right: 0; top: 0; bottom: 0;
+    width: 220px; background: #0A1830;
+    border-left: 1px solid #1A3A6B;
+    padding: 20px 14px;
+    display: flex; flex-direction: column; gap: 12px;
+    overflow-y: auto;
+    z-index: 100;
+    transform: translateX(100%);
+    transition: transform 0.3s;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-title { font-size: 11px; font-weight: 700; color: #A8C8F8; border-bottom: 1px solid #1A3A6B; padding-bottom: 8px; }
+  .sidebar-item { font-size: 9px; color: #6080A0; line-height: 1.6; }
+  .sidebar-item strong { color: #90B8E0; }
+  .sidebar-close { position: absolute; top: 12px; right: 12px; background: none; border: none;
+                   color: #5080A0; font-size: 16px; cursor: pointer; }
+
+  .toggle-sidebar {
+    position: fixed; right: 14px; bottom: 20px;
+    background: #1A56B0; color: #fff; border: none;
+    border-radius: 50%; width: 40px; height: 40px;
+    font-size: 16px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    transition: background 0.2s;
+    z-index: 200;
+  }
+  .toggle-sidebar:hover { background: #2E6BC4; }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .agents-row { grid-template-columns: repeat(2, 1fr); }
+    .output-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <h1>PMAX Growth Team — AI-First BD Orchestration Map & Data Flow</h1>
+    <p>4-Agent Pipeline · Single Data Spine · Trigger Design · Human Handoff Points · Q1 2026</p>
+  </div>
+  <span class="badge">v1.2 · CRO Office</span>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip">
+  <div class="tooltip-title" id="tt-title"></div>
+  <div id="tt-body"></div>
+</div>
+
+<!-- Sidebar -->
+<div class="sidebar" id="sidebar">
+  <button class="sidebar-close" onclick="toggleSidebar()">✕</button>
+  <div class="sidebar-title">Stack & Integration</div>
+  <div class="sidebar-item"><strong>Orchestration</strong><br>n8n (self-hosted) — trigger-based workflows, complex branching</div>
+  <div class="sidebar-item"><strong>AI Model</strong><br>Gemini 1.5 Pro via Google AI Studio — scoring, NLP, action plan generation</div>
+  <div class="sidebar-item"><strong>Data Spine</strong><br>Google Sheets — BD Activity Master 2026 (single source of truth)</div>
+  <div class="sidebar-item"><strong>Voice Logging</strong><br>Google Speech-to-Text + custom parser — activity code auto-tagging</div>
+  <div class="sidebar-item"><strong>Calendar Sync</strong><br>Google Calendar API — meeting events → M_Type auto-log</div>
+  <div class="sidebar-item"><strong>Notification</strong><br>Google Chat Webhook + Gmail — daily action plans, alerts</div>
+  <div class="sidebar-item"><strong>Dashboard</strong><br>Google Looker Studio — capacity heatmap, weekly BDM brief</div>
+  <div class="sidebar-title" style="margin-top:8px">Governance Ladder</div>
+  <div class="sidebar-item"><strong>L0</strong> — Shadow mode, no visible output</div>
+  <div class="sidebar-item"><strong>L1</strong> — Human approves all (Wk 1–4)</div>
+  <div class="sidebar-item"><strong>L2</strong> — Human reviews 20% sample</div>
+  <div class="sidebar-item"><strong>L3</strong> — Autonomous + exception escalation</div>
+  <div class="sidebar-title" style="margin-top:8px">KPI Targets</div>
+  <div class="sidebar-item"><strong>Scoring accuracy</strong> ≥ 85% vs win rate</div>
+  <div class="sidebar-item"><strong>Logging compliance</strong> ≥ 95%</div>
+  <div class="sidebar-item"><strong>Log time</strong> &lt; 90 seconds/activity</div>
+  <div class="sidebar-item"><strong>Action plan accuracy</strong> ≥ 80%</div>
+  <div class="sidebar-item"><strong>Time-to-action</strong> &lt; 2h from delivery</div>
+</div>
+
+<button class="toggle-sidebar" onclick="toggleSidebar()" title="Stack & KPIs">⚙</button>
+
+<!-- Main Canvas -->
+<div class="canvas">
+
+  <!-- INPUT LAYER -->
+  <div class="section-label">Input Sources</div>
+  <div class="input-layer">
+    <div style="font-size:8px;font-weight:700;color:#3A5A8A;white-space:nowrap;letter-spacing:1px">INPUT<br>LAYER</div>
+    <div class="input-chip"
+         data-tt-title="ICP Targeting 2024"
+         data-tt="Revenue tier model (VIP ≥3 tỷ, Important 1.5–3 tỷ, Medium 0.5–1.5 tỷ, Tail &lt;0.5 tỷ VNĐ/năm). Maslow framework. 6 contract duration tiers with revenue multipliers.">
+      <span class="ic">📊</span>ICP Targeting 2024
+    </div>
+    <div class="input-chip"
+         data-tt-title="New Segmentation Logic"
+         data-tt="Segmentation matrix (Financial × Contractual × Vertical). 19 industry verticals. BD training curriculum, career ladder, process flows.">
+      <span class="ic">🗂</span>Segmentation Logic
+    </div>
+    <div class="input-chip green"
+         data-tt-title="Google Calendar"
+         data-tt="Meeting events auto-detected → M_Type_1-4 activities logged. Post-meeting Slack prompt sent to BD rep for outcome capture.">
+      <span class="ic">📅</span>Google Calendar (meetings)
+    </div>
+    <div class="input-chip green"
+         data-tt-title="Voice Input"
+         data-tt="BD speaks after call → Speech-to-Text → parsed into activity codes (C_1st_V, C_1st_H, etc.) + stage + next action suggestion. Target: &lt;30s per log.">
+      <span class="ic">🎙</span>Voice Input (call notes)
+    </div>
+    <div class="input-chip amber"
+         data-tt-title="Google Chat"
+         data-tt="BD replies to structured prompts from Agent 3. Used for outcome capture, override requests, and escalation alerts.">
+      <span class="ic">💬</span>Google Chat (BD updates)
+    </div>
+    <div class="input-chip amber"
+         data-tt-title="BD Activity Master 2026"
+         data-tt="Live canonical data spine. 76+ activity codes, 6 BD reps tracked, 4 campaign types, 15+ dashboard views. Single source of truth for all agents.">
+      <span class="ic">📋</span>BD Activity Master 2026
+    </div>
+    <div class="input-chip"
+         data-tt-title="Historical Win/Loss Data"
+         data-tt="Past deal outcomes used to calibrate scoring weights. Minimum 3 won deals per vertical required before model trains on vertical-specific rules.">
+      <span class="ic">🏆</span>Historical Win/Loss data
+    </div>
+  </div>
+
+  <!-- AGENT CARDS -->
+  <div class="section-label">Agent Pipeline</div>
+  <div class="agents-row">
+
+    <!-- AGENT 1 -->
+    <div class="agent-card a1"
+         data-tt-title="Agent 1 — Company Scoring & Segmentation"
+         data-tt="Trigger: Weekly batch + on-demand. Scores all BD leads on 5 dimensions: Revenue Potential (30%), Strategic Fit (25%), Market Timing Signal (20%), Contract Duration (15%), Account Complexity (10%). Output: Score 0–100 + Tier (VIP/Important/Medium/Tail). Governance: L1 → L2 after 4 weeks if accuracy ≥85%.">
+      <div class="agent-header">
+        <div class="agent-num">A1</div>
+        <div>
+          <div class="agent-title">COMPANY SCORING</div>
+          <div class="agent-sub">& SEGMENTATION</div>
+        </div>
+      </div>
+      <div class="agent-body">
+        <div class="agent-section sec-trigger">
+          <div class="sec-label"><span class="dot dot-trigger"></span>TRIGGER</div>
+          <div class="sec-content">Weekly batch<br>On-demand enrichment</div>
+        </div>
+        <div class="agent-section sec-tools">
+          <div class="sec-label"><span class="dot" style="background:#304060"></span>TOOLS</div>
+          <div class="sec-content">Gemini 1.5 Pro<br>n8n orchestration</div>
+        </div>
+        <div class="agent-section sec-output">
+          <div class="sec-label"><span class="dot dot-a1"></span>OUTPUT</div>
+          <div class="sec-content">Score 0–100 + Tier<br>(VIP / Imp / Med / Tail)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENT 2 -->
+    <div class="agent-card a2"
+         data-tt-title="Agent 2 — BD Lead Allocation"
+         data-tt="Trigger: Post-scoring batch + manual add. Allocates leads via 4-factor optimization: Rep Vertical Expertise (35%), Current Pipeline Load (30%), Deal Stage Bandwidth (20%), Seniority vs Deal Size (15%). No round-robin. VIP leads capped at 5 concurrent per rep. Conflict → escalate to BDM.">
+      <div class="agent-header">
+        <div class="agent-num">A2</div>
+        <div>
+          <div class="agent-title">BD LEAD ALLOCATION</div>
+          <div class="agent-sub">Optimization Model</div>
+        </div>
+      </div>
+      <div class="agent-body">
+        <div class="agent-section sec-trigger">
+          <div class="sec-label"><span class="dot dot-trigger"></span>TRIGGER</div>
+          <div class="sec-content">Post-scoring trigger<br>Manual add</div>
+        </div>
+        <div class="agent-section sec-tools">
+          <div class="sec-label"><span class="dot" style="background:#304060"></span>TOOLS</div>
+          <div class="sec-content">n8n scoring rules<br>Optimization logic</div>
+        </div>
+        <div class="agent-section sec-output">
+          <div class="sec-label"><span class="dot dot-a2"></span>OUTPUT</div>
+          <div class="sec-content">Lead → Rep assignment<br>Capacity dashboard</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENT 3 -->
+    <div class="agent-card a3"
+         data-tt-title="Agent 3 — Activity Tracking Input"
+         data-tt="Trigger: Real-time (post-call) + Daily 6PM batch. 3 input channels: Voice-to-log (&lt;30s), Calendar sync (meeting auto-log), Daily catch-up (flags leads with no activity in 48h). Logs 8-field structured entries. Anti-pattern: duplicate detection, parse confidence &lt;70% → ask again, stage regression protection.">
+      <div class="agent-header">
+        <div class="agent-num">A3</div>
+        <div>
+          <div class="agent-title">ACTIVITY TRACKING</div>
+          <div class="agent-sub">Input Logging</div>
+        </div>
+      </div>
+      <div class="agent-body">
+        <div class="agent-section sec-trigger">
+          <div class="sec-label"><span class="dot dot-trigger"></span>TRIGGER</div>
+          <div class="sec-content">Real-time (post-call)<br>Daily 6PM batch</div>
+        </div>
+        <div class="agent-section sec-tools">
+          <div class="sec-label"><span class="dot" style="background:#304060"></span>TOOLS</div>
+          <div class="sec-content">Google Speech-to-Text<br>Calendar API · n8n</div>
+        </div>
+        <div class="agent-section sec-output">
+          <div class="sec-label"><span class="dot dot-a3"></span>OUTPUT</div>
+          <div class="sec-content">Structured activity log<br>Next action suggest</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENT 4 -->
+    <div class="agent-card a4"
+         data-tt-title="Agent 4 — Re-prioritization"
+         data-tt="Trigger: Daily 8AM + Weekly Monday 7AM. Re-scores leads on 5 dynamic signals: Days Since Last Activity (25%), Stage Velocity (25%), Market Urgency Signal (20%), Contract Renewal Date (20%), Engagement Recency (10%). Delivers personalized daily action plan per BD rep via Google Chat. Weekly BDM brief on Monday 7AM.">
+      <div class="agent-header">
+        <div class="agent-num">A4</div>
+        <div>
+          <div class="agent-title">RE-PRIORITIZATION</div>
+          <div class="agent-sub">Daily & Weekly</div>
+        </div>
+      </div>
+      <div class="agent-body">
+        <div class="agent-section sec-trigger">
+          <div class="sec-label"><span class="dot dot-trigger"></span>TRIGGER</div>
+          <div class="sec-content">Daily 8AM<br>Weekly Monday 7AM</div>
+        </div>
+        <div class="agent-section sec-tools">
+          <div class="sec-label"><span class="dot" style="background:#304060"></span>TOOLS</div>
+          <div class="sec-content">Gemini · n8n scheduler<br>Rules engine</div>
+        </div>
+        <div class="agent-section sec-output">
+          <div class="sec-label"><span class="dot dot-a4"></span>OUTPUT</div>
+          <div class="sec-content">Daily action plan/rep<br>Weekly BDM brief</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /agents-row -->
+
+  <!-- FLOW ARROWS between agents -->
+  <div class="connector-row" style="margin-top:6px; margin-bottom:0">
+    <div class="conn-cell">
+      <div style="width:100%;position:relative;height:20px">
+        <div class="flow-line a1" style="position:absolute;right:-7px;top:50%;height:2px;left:60%"></div>
+        <div class="flow-dot" style="background:#1A56B0;left:60%;width:5px;height:5px;animation-duration:1.4s"></div>
+        <div style="font-size:7.5px;color:#3A6090;text-align:center;line-height:1;position:absolute;top:2px;left:0;right:0">Scored leads → allocation queue</div>
+      </div>
+    </div>
+    <div class="conn-cell">
+      <div style="width:100%;position:relative;height:20px">
+        <div class="flow-line a2" style="position:absolute;right:-7px;top:50%;height:2px;left:60%"></div>
+        <div class="flow-dot" style="background:#009599;left:60%;width:5px;height:5px;animation-duration:1.4s;animation-delay:0.3s"></div>
+        <div style="font-size:7.5px;color:#3A6090;text-align:center;line-height:1;position:absolute;top:2px;left:0;right:0">Assigned rep → logging context</div>
+      </div>
+    </div>
+    <div class="conn-cell">
+      <div style="width:100%;position:relative;height:20px">
+        <div class="flow-line a3" style="position:absolute;right:-7px;top:50%;height:2px;left:60%"></div>
+        <div class="flow-dot" style="background:#D4890A;left:60%;width:5px;height:5px;animation-duration:1.4s;animation-delay:0.6s"></div>
+        <div style="font-size:7.5px;color:#3A6090;text-align:center;line-height:1;position:absolute;top:2px;left:0;right:0">Activity data → dynamic rescore</div>
+      </div>
+    </div>
+    <div class="conn-cell"><!-- no arrow after A4 --></div>
+  </div>
+
+  <!-- HUMAN HANDOFF ROW -->
+  <div class="handoff-row" style="margin-top:4px">
+    <div class="handoff-cell">
+      <div class="handoff-badge"
+           data-tt-title="Human Handoff — L1 (Agent 1)"
+           data-tt="BDM approves ALL scoring outputs for weeks 1–4. Reviews score vs own judgment. If accuracy ≥85% over 4 weeks → upgrade A1 to L2 (sample review only).">
+        👤 L1: BDM approves<br>all scores (Wk 1–4)
+      </div>
+    </div>
+    <div class="handoff-cell">
+      <div class="handoff-badge"
+           data-tt-title="Human Handoff — L1 (Agent 2)"
+           data-tt="BDM resolves allocation conflicts (equal-score leads, rep at capacity). Override logged to learning file. Reallocation trigger if rep inactive on lead ≥14 days.">
+        👤 L1: BDM reviews<br>allocation conflicts
+      </div>
+    </div>
+    <div class="handoff-cell"><!-- A3 no handoff shown --></div>
+    <div class="handoff-cell">
+      <div class="handoff-badge"
+           data-tt-title="Human Handoff — L2 (Agent 4)"
+           data-tt="CRO reviews weekly BDM brief every Monday. Reviews stalled deal list, renewal risk register, and pipeline health KPIs. After Wk 8 stable → upgrade to L3 autonomous.">
+        👤 L2: CRO reviews<br>weekly brief
+      </div>
+    </div>
+  </div>
+
+  <!-- WRITE ARROWS (agents → spine) -->
+  <div class="flow-bridge">
+    <div class="bridge-cell">
+      <div class="bridge-label" style="color:#1A56B0">Score + Tier written</div>
+      <div class="arrow-down" style="color:#1A56B0">↓</div>
+    </div>
+    <div class="bridge-cell">
+      <div class="bridge-label" style="color:#009599">Owner assigned<br>written</div>
+      <div class="arrow-down" style="color:#009599">↓</div>
+    </div>
+    <div class="bridge-cell">
+      <div class="bridge-label" style="color:#D4890A">Activity log<br>appended</div>
+      <div class="arrow-down" style="color:#D4890A">↓</div>
+    </div>
+    <div class="bridge-cell">
+      <div class="bridge-label" style="color:#197347">Priority + Action<br>updated</div>
+      <div class="arrow-down" style="color:#197347">↓</div>
+    </div>
+  </div>
+
+  <!-- DATA SPINE -->
+  <div class="spine-wrapper">
+    <div class="section-label">Single Data Spine</div>
+    <div class="spine"
+         data-tt-title="Data Spine — BD Activity Master 2026"
+         data-tt="Single source of truth. All 4 agents read from and write to this spine. No agent has a private data format. 12 canonical fields. Append-only activity log + curated weekly learning file for model improvement.">
+      <div class="spine-label">DATA<br>SPINE</div>
+      <div class="spine-fields">
+        <div class="spine-field" data-tt-title="Lead_ID" data-tt="Immutable identifier. Generated on first lead entry. Never changes across lifecycle.">Lead_ID</div>
+        <div class="spine-field" data-tt-title="Company & Vertical" data-tt="Company name + one of 19 industry verticals (Real Estate, Finance, FMCG, Pharma...). Used for scoring dimension 2 (Strategic Fit).">Company & Vertical</div>
+        <div class="spine-field" data-tt-title="ICP Score & Tier" data-tt="Composite score 0–100 from Agent 1. Tier: VIP (80–100), Important (60–79), Medium (40–59), Tail (&lt;40). Re-scored weekly.">ICP Score & Tier</div>
+        <div class="spine-field" data-tt-title="Owner & Allocation Date" data-tt="Assigned BD rep + allocation date. Set by Agent 2. Reallocation trigger if no activity ≥14 days.">Owner & Allocation</div>
+        <div class="spine-field" data-tt-title="Campaign Type" data-tt="One of 4 types: Win New (Zerobiller/Service push/Active pitching), Reactivate, Product Testing, Cross-sell/Upsell.">Campaign Type</div>
+        <div class="spine-field" data-tt-title="Activity Log" data-tt="Append-only. Each entry: Date · Activity_Code · Stage_Before→After · Summary · Next_Action · Confidence_Signal. Written by Agent 3.">Activity Log</div>
+        <div class="spine-field" data-tt-title="Stage & Velocity" data-tt="Current funnel stage (Lead→Prospect→Opportunity→Deal). Days in current stage tracked. Stall threshold: 21 days triggers +20 urgency points.">Stage & Velocity</div>
+        <div class="spine-field" data-tt-title="Next Action" data-tt="Agent 3 auto-suggests based on activity code mapping: C_1st_V → M_Type_1 (Discovery) → Proposal → M_Type_3 (Negotiation) → Contract.">Next Action</div>
+        <div class="spine-field" data-tt-title="Urgency Flags" data-tt="Composite of 5 dynamic signals: Days stale, stage velocity, market urgency, renewal deadline, engagement recency. Updated daily by Agent 4.">Urgency Flags</div>
+        <div class="spine-field" data-tt-title="Pipeline Value" data-tt="Estimated deal value in tỷ VNĐ/năm. Used in capacity dashboard and weekly BDM brief.">Pipeline Value</div>
+        <div class="spine-field" data-tt-title="Learning Log" data-tt="Curated weekly extraction from activity log. Contains: override patterns, score calibration signals, vertical-specific win insights. Fed back into Agent 1 prompt context.">Learning Log</div>
+        <div class="spine-field" data-tt-title="Audit Trail" data-tt="All manual overrides logged with: rep, BDM, timestamp, reason. Used for governance review and trust level upgrade decisions.">Audit Trail</div>
+      </div>
+      <div class="spine-note">← Single Source of Truth<br>BD Activity Master 2026</div>
+    </div>
+  </div>
+
+  <!-- READ ARROWS (spine → agents) -->
+  <div class="flow-bridge" style="margin-top:0">
+    <div class="bridge-cell"><!-- A1 doesn't read from spine to process --></div>
+    <div class="bridge-cell">
+      <div class="arrow-up" style="color:#009599">↑</div>
+      <div class="bridge-label" style="color:#3A6090">Reads scores<br>for allocation</div>
+    </div>
+    <div class="bridge-cell">
+      <div class="arrow-up" style="color:#D4890A">↑</div>
+      <div class="bridge-label" style="color:#3A6090">Reads lead<br>assignment</div>
+    </div>
+    <div class="bridge-cell">
+      <div class="arrow-up" style="color:#197347">↑</div>
+      <div class="bridge-label" style="color:#3A6090">Reads full history<br>for re-scoring</div>
+    </div>
+  </div>
+
+  <!-- OUTPUT LAYER -->
+  <div class="output-layer">
+    <div class="section-label" style="margin-bottom:0">Output & Delivery Layer</div>
+    <div class="output-grid">
+
+      <div class="output-card"
+           data-tt-title="Scoring Report (Weekly)"
+           data-tt="Delivered every Friday EOD. Contents: tier breakdown pie, score distribution histogram, new vs stale leads, vertical heatmap. Destination: Google Sheets dedicated tab → auto-shared to BDM.">
+        <div class="output-header">📊 SCORING REPORT<br><span style="font-weight:400;opacity:0.8">Weekly</span></div>
+        <div class="output-body">
+          <div class="output-line">▸ Tier breakdown</div>
+          <div class="output-line">▸ Score distribution</div>
+          <div class="output-line">▸ New vs stale leads</div>
+          <div class="output-line delivery">→ Google Sheets tab</div>
+        </div>
+      </div>
+
+      <div class="output-card"
+           data-tt-title="Allocation Brief (Post-scoring)"
+           data-tt="Sent immediately after A2 runs. Contents: lead→rep mapping table, capacity heatmap (AVAILABLE/OPTIMAL/HIGH), conflict flag list. Destination: Google Chat BDM channel.">
+        <div class="output-header">👤 ALLOCATION BRIEF<br><span style="font-weight:400;opacity:0.8">Post-scoring</span></div>
+        <div class="output-body">
+          <div class="output-line">▸ Lead → Rep mapping</div>
+          <div class="output-line">▸ Capacity heatmap</div>
+          <div class="output-line">▸ Conflict flags</div>
+          <div class="output-line delivery">→ Google Chat alert</div>
+        </div>
+      </div>
+
+      <div class="output-card"
+           data-tt-title="Activity Log (Real-time)"
+           data-tt="Appended to Activity Master within 30 seconds of voice log or calendar event. 8-field structured entry. Next action auto-suggested. Stage transition tracked.">
+        <div class="output-header">📝 ACTIVITY LOG<br><span style="font-weight:400;opacity:0.8">Real-time</span></div>
+        <div class="output-body">
+          <div class="output-line">▸ Structured entries</div>
+          <div class="output-line">▸ Next action queue</div>
+          <div class="output-line">▸ Stage transitions</div>
+          <div class="output-line delivery">→ Activity Master</div>
+        </div>
+      </div>
+
+      <div class="output-card"
+           data-tt-title="Daily Action Plan (8AM / per rep)"
+           data-tt="Personalized per BD rep. 3 buckets: Urgent (act today), Follow-up (this week), Monitor (no action). Sorted by dynamic priority score. Includes: company, tier, score, renewal timeline, suggested next action + template reference.">
+        <div class="output-header">📬 DAILY ACTION PLAN<br><span style="font-weight:400;opacity:0.8">8AM · per rep</span></div>
+        <div class="output-body">
+          <div class="output-line urgent">▸ Urgent (act today)</div>
+          <div class="output-line followup">▸ Follow-up this week</div>
+          <div class="output-line monitor">▸ Monitor only</div>
+          <div class="output-line delivery">→ Google Chat DM</div>
+        </div>
+      </div>
+
+      <div class="output-card"
+           data-tt-title="Weekly BDM Brief (Monday 7AM)"
+           data-tt="For BDM + CRO. Contents: pipeline health KPIs table, stalled deal list (>21 days in stage), renewal risk register (60-day window), urgency-triggered leads count, capacity variance. Destination: Email + Google Chat BDM channel.">
+        <div class="output-header">📈 WEEKLY BDM BRIEF<br><span style="font-weight:400;opacity:0.8">Monday 7AM</span></div>
+        <div class="output-body">
+          <div class="output-line">▸ Pipeline health KPIs</div>
+          <div class="output-line">▸ Stalled deal list</div>
+          <div class="output-line">▸ Renewal risk register</div>
+          <div class="output-line delivery">→ Email + Chat</div>
+        </div>
+      </div>
+
+      <div class="output-card"
+           data-tt-title="Escalation Alerts (Real-time)"
+           data-tt="Triggered by: rep overload (>15 active deals), kill criteria breach (VIP conversion rate <20% over 90 days), stage regression detected, parse confidence failure. Destination: BDM + CRO via Google Chat mention.">
+        <div class="output-header">🔔 ESCALATION ALERTS<br><span style="font-weight:400;opacity:0.8">Real-time</span></div>
+        <div class="output-body">
+          <div class="output-line urgent">▸ Overload warnings</div>
+          <div class="output-line urgent">▸ Kill criteria triggers</div>
+          <div class="output-line">▸ Override requests</div>
+          <div class="output-line delivery">→ BDM / CRO notify</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <div class="legend-item"><div class="leg-box" style="background:#1A56B0"></div>Agent 1 — Scoring</div>
+    <div class="legend-item"><div class="leg-box" style="background:#009599"></div>Agent 2 — Allocation</div>
+    <div class="legend-item"><div class="leg-box" style="background:#D4890A"></div>Agent 3 — Activity Logging</div>
+    <div class="legend-item"><div class="leg-box" style="background:#197347"></div>Agent 4 — Re-prioritization</div>
+    <div class="legend-item"><div class="leg-line" style="background:#2E6BC4"></div>Data Spine (read/write)</div>
+    <div class="legend-item"><div class="leg-box" style="background:#3A0A0A;border:1px solid #C0392B"></div>Human handoff point</div>
+    <div class="legend-item"><div class="leg-line" style="background:#1A56B0"></div>Data write (↓ Spine)</div>
+    <div class="legend-item"><div class="leg-dashed" style="border-color:#3A6090"></div>Data read (↑ Spine)</div>
+    <div style="flex:1"></div>
+    <div style="font-size:8px;color:#2A4A6A">Hover bất kỳ element để xem chi tiết · Click ⚙ để xem Stack & KPIs</div>
+  </div>
+
+</div><!-- /canvas -->
+
+<script>
+// ── Tooltip logic ─────────────────────────────────────────────────────────────
+const tooltip = document.getElementById('tooltip');
+const ttTitle = document.getElementById('tt-title');
+const ttBody  = document.getElementById('tt-body');
+
+document.querySelectorAll('[data-tt-title]').forEach(el => {
+  el.addEventListener('mouseenter', e => {
+    ttTitle.textContent = el.dataset.ttTitle;
+    ttBody.innerHTML    = el.dataset.tt || '';
+    tooltip.classList.add('visible');
+  });
+  el.addEventListener('mousemove', e => {
+    let x = e.clientX + 14, y = e.clientY + 14;
+    if (x + 270 > window.innerWidth)  x = e.clientX - 274;
+    if (y + 120 > window.innerHeight) y = e.clientY - 120;
+    tooltip.style.left = x + 'px';
+    tooltip.style.top  = y + 'px';
+  });
+  el.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+});
+
+// ── Sidebar ───────────────────────────────────────────────────────────────────
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ── Agent card click — highlight active ──────────────────────────────────────
+document.querySelectorAll('.agent-card').forEach(card => {
+  card.addEventListener('click', () => {
+    document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('active'));
+    card.classList.toggle('active');
+  });
+});
+
+// ── Spine field click — highlight ────────────────────────────────────────────
+document.querySelectorAll('.spine-field').forEach(f => {
+  f.addEventListener('click', () => {
+    f.style.background = f.style.background === 'rgb(40, 74, 128)' ? '' : '#284A80';
+    f.style.borderColor = f.style.borderColor === 'rgb(80, 128, 192)' ? '' : '#5080C0';
+  });
+});
+</script>
+</body>
+</html>
